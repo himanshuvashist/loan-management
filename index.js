@@ -114,35 +114,33 @@ app.post('/getdata', authenticateJWT, (req, res) => {
     res.json([{ book1: 'harrypotter', book2: 'dungeon' }])
 })
 
-async function alreadyExists(data) {
-    let r = await user.countDocuments({ email: data.email })
-    if (r) return true
+//registraion middlewares
+const registrationPreCheck = async (req, res, next) => {
+    let r = await user.countDocuments({ email: req.body.email })
+    if (r) return res.send('Middleware says email already exists')
 
-    let u = await user.countDocuments({ userName: data.name })
-    if (u != 0) return true
+    let u = await user.countDocuments({ userName: req.body.name })
+    if (u) return res.send('Middleware says username already exists')
 
-    return false
+    next()
 }
 
-app.post('/register', (req, res) => {
-    alreadyExists(req.body).then((r) => {
-        if (r) return res.send('User already registered')
-        bcrypt.hash(req.body.password, process.env.SALT, function (err, hash) {
-            if (err) return res.send('error')
-            const user_instance = new user()
-            user_instance.userName = req.body.name
-            user_instance.password = hash
-            user_instance.date = Date.now()
-            user_instance.email = req.body.email
-            user_instance.save((err) => {
-                if (err) {
-                    console.log('Error in inserting')
-                    res.send('error')
-                }
-            })
+app.post('/register', registrationPreCheck, (req, res) => {
+    bcrypt.hash(req.body.password, process.env.SALT, function (err, hash) {
+        if (err) return res.send('error')
+        const user_instance = new user()
+        user_instance.userName = req.body.name
+        user_instance.password = hash
+        user_instance.date = Date.now()
+        user_instance.email = req.body.email
+        user_instance.save((err) => {
+            if (err) {
+                console.log('Error in inserting')
+                res.send('error')
+            }
         })
-        res.send({ response: 'successfully inserted' })
     })
+    res.send({ response: 'successfully inserted' })
 })
 
 app.post('/logout', (req, res) => {
