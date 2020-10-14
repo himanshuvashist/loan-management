@@ -2,12 +2,14 @@ const express = require('express')
 const app = express()
 const port = 3000
 // const logger = require('morgan')
+var cookieParser = require('cookie-parser')
 const bcrypt = require('bcrypt')
 const dotenv = require('dotenv')
 const mongoose = require('mongoose')
 const user = require('./models/user')
 const jwt = require('jsonwebtoken')
 app.use(express.json())
+app.use(cookieParser())
 
 const result = dotenv.config()
 
@@ -48,7 +50,7 @@ app.post('/login', (req, res) => {
                 var accessToken = jwt.sign(
                     { foo: 'bar' },
                     process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
-                    { expiresIn: '20m' }
+                    { expiresIn: '20s' }
                 )
                 var refreshToken = jwt.sign(
                     { foo: 'bar' },
@@ -57,11 +59,20 @@ app.post('/login', (req, res) => {
 
                 console.log(accessToken)
                 console.log(refreshToken)
-                if (result)
+
+                if (result) {
+                    //  set cookie flag secure in production
+                    res.cookie('token', refreshToken, {
+                        expires: new Date(Date.now() + 900000),
+                        httpOnly: true,
+                    })
                     return res.json({ accessToken, refreshToken, loggedin: 1 })
+                }
                 return res.json({ loggedin: 0 })
             })
         })
+    } else {
+        res.sendStatus(401)
     }
 })
 
@@ -80,7 +91,7 @@ app.post('/token', (req, res) => {
         const accessToken = jwt.sign(
             { data: 'data' },
             process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
-            { expiresIn: '20m' }
+            { expiresIn: '20s' }
         )
 
         res.json({ accessToken })
@@ -89,7 +100,6 @@ app.post('/token', (req, res) => {
 //authentication middleware
 const authenticateJWT = (req, res, next) => {
     const authHeader = req.headers.authorization
-
     if (authHeader) {
         const token = authHeader.split(' ')[1]
 
@@ -97,12 +107,33 @@ const authenticateJWT = (req, res, next) => {
             token,
             process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
             (err, data) => {
-                if (err) console.log(`Error ${err}`)
-                if (err) return res.sendStatus(403) //forbidden
-                console.log(data)
-                data.user = user
-                console.log(data)
-                next()
+                if (err) {
+                    console.log(`Error ${err}`)
+                    console.log(typeof err)
+                    console.log(err.name)
+                    if (err.name === 'TokenExpiredError') {
+                        const refreshToken = req.cookies.token
+                        jwt.verify(
+                            refreshToken,
+                            process.env.JWT_REFRESH_TOKEN_SECRET_KEY,
+                            (err, data) => {
+                                if (err) {
+                                    console.log(`Refresh token error: ${err}`)
+                                    res.sendStatus(401)
+                                } else {
+                                    next()
+                                }
+                            }
+                        )
+                    } else {
+                        return res.sendStatus(403) //forbidden
+                    }
+                } else {
+                    console.log(data)
+                    data.user = user
+                    console.log(data)
+                    next()
+                }
             }
         )
     } else {
@@ -111,7 +142,27 @@ const authenticateJWT = (req, res, next) => {
 }
 
 app.post('/getdata', authenticateJWT, (req, res) => {
-    res.json([{ book1: 'harrypotter', book2: 'dungeon' }])
+    console.log(req.body)
+    const authHeader = req.headers.authorization
+    const token = authHeader.split(' ')[1]
+    jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, data) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                const newAccessToken = jwt.sign(
+                    { data: 'data' },
+                    process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
+                    { expiresIn: '20s' }
+                )
+                res.json([{ book1: 'harrypotter', book2: 'dungeon' },newAccessToken])
+            }
+            else{
+                res.json(402)
+            }
+        }else{
+            res.json([{ book1: 'harrypotter', book2: 'dungeon' }])
+
+        }
+    })
 })
 
 //registraion middlewares
@@ -147,6 +198,9 @@ app.post('/logout', (req, res) => {
     const { token } = req.body
 
     // remove the refrest token from the DB
+
+    // remove all cookies
+    res.clearCookie('token', { path: '/' })
 
     res.sendStatus(200)
 })
