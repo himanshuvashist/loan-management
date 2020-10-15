@@ -36,7 +36,7 @@ try {
 }
 
 app.get('/', (req, res) => {
-    res.send('😃')
+    res.json('😃')
 })
 
 app.post('/login', (req, res) => {
@@ -72,7 +72,7 @@ app.post('/login', (req, res) => {
             })
         })
     } else {
-        res.sendStatus(401)
+        res.sendStatus(400)
     }
 })
 
@@ -153,25 +153,33 @@ app.post('/getdata', authenticateJWT, (req, res) => {
                     process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
                     { expiresIn: '20s' }
                 )
-                res.json([{ book1: 'harrypotter', book2: 'dungeon' },newAccessToken])
-            }
-            else{
+                res.json([
+                    { book1: 'harrypotter', book2: 'dungeon' },
+                    newAccessToken,
+                ])
+            } else {
                 res.json(402)
             }
-        }else{
+        } else {
             res.json([{ book1: 'harrypotter', book2: 'dungeon' }])
-
         }
     })
 })
 
 //registraion middlewares
 const registrationPreCheck = async (req, res, next) => {
+    if (!(req.body.hasOwnProperty(`email`) && req.body.email != ''))
+        return res.sendStatus(400)
+    if (!(req.body.hasOwnProperty(`userName`) && req.body.userName != ''))
+        return res.sendStatus(400)
+    if (!(req.body.hasOwnProperty(`password`) && req.body.password != ''))
+        return res.sendStatus(400)
+
     let r = await user.countDocuments({ email: req.body.email })
-    if (r) return res.send('Middleware says email already exists')
+    if (r) return res.sendStatus(403)
 
     let u = await user.countDocuments({ userName: req.body.name })
-    if (u) return res.send('Middleware says username already exists')
+    if (u) return res.sendStatus(403)
 
     next()
 }
@@ -205,8 +213,4 @@ app.post('/logout', (req, res) => {
     res.sendStatus(200)
 })
 
-app.listen(port, () => {
-    console.log(
-        `Running on port: ${port}, address is: http://localhost:${port}`
-    )
-})
+module.exports = { app }
