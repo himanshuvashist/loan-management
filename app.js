@@ -142,7 +142,6 @@ const authenticateJWT = (req, res, next) => {
 }
 
 app.post('/getdata', authenticateJWT, (req, res) => {
-    console.log(req.body)
     const authHeader = req.headers.authorization
     const token = authHeader.split(' ')[1]
     jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, data) => {
@@ -170,7 +169,7 @@ app.post('/getdata', authenticateJWT, (req, res) => {
 const registrationPreCheck = async (req, res, next) => {
     if (!(req.body.hasOwnProperty(`email`) && req.body.email != ''))
         return res.sendStatus(400)
-    if (!(req.body.hasOwnProperty(`userName`) && req.body.userName != ''))
+    if (!(req.body.hasOwnProperty(`name`) && req.body.userName != ''))
         return res.sendStatus(400)
     if (!(req.body.hasOwnProperty(`password`) && req.body.password != ''))
         return res.sendStatus(400)
@@ -186,7 +185,7 @@ const registrationPreCheck = async (req, res, next) => {
 
 app.post('/register', registrationPreCheck, (req, res) => {
     bcrypt.hash(req.body.password, process.env.SALT, function (err, hash) {
-        if (err) return res.send('error')
+        if (err) return res.sendStatus(500)
         const user_instance = new user()
         user_instance.userName = req.body.name
         user_instance.password = hash
@@ -200,6 +199,19 @@ app.post('/register', registrationPreCheck, (req, res) => {
         })
     })
     res.send({ response: 'successfully inserted' })
+})
+
+const checkApplicationForm = (req, res, next) => {
+    // TODO
+    if (Object.keys(req.body).length == 0) res.sendStatus(400)
+    next()
+}
+
+app.post('/submit', authenticateJWT, checkApplicationForm, (req, res) => {
+    // TODO - add form to the db
+
+    // return 200
+    res.sendStatus(200)
 })
 
 app.post('/logout', (req, res) => {
