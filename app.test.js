@@ -82,3 +82,14 @@ describe('Test /login path', () => {
 describe('Test /getdata path', () => {})
 
 describe('Test /logout path', () => {})
+
+describe('Test /submit path', () => {
+    it(`get 400 on sending no body`, (done) => {
+        request(app)
+            .post('/submit')
+            .then((res) => {
+                expect(res.StatusCode).toEqual(400)
+                done()
+            })
+    })
+})
