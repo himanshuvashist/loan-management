@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const port = 3000
 // const logger = require('morgan')
+const cors = require('cors')
 var cookieParser = require('cookie-parser')
 const bcrypt = require('bcrypt')
 const dotenv = require('dotenv')
@@ -10,6 +11,7 @@ const user = require('./models/user')
 const jwt = require('jsonwebtoken')
 app.use(express.json())
 app.use(cookieParser())
+app.use(cors())
 
 const result = dotenv.config()
 
