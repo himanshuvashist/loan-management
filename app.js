@@ -11,7 +11,15 @@ const user = require('./models/user')
 const jwt = require('jsonwebtoken')
 app.use(express.json())
 app.use(cookieParser())
-app.use(cors())
+
+const corsConfig = {
+    origin: 'http://localhost:3001',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    credentials: true,
+}
+app.use(cors(corsConfig))
 
 const result = dotenv.config()
 
