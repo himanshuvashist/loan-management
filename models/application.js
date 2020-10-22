@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-const ObjectId = mongoose.Schema.ObjectId
+const ObjectId = mongoose.Types.ObjectId
 
 const application_schema = new mongoose.Schema({
     on_behalf:{
@@ -15,9 +15,10 @@ const application_schema = new mongoose.Schema({
         ref: 'user_model',
     },
     stage: Number,
+    tenure:Number,
     date: {
         type: Date,
-        Default: Date.now,
+        default: Date.now,
     },
 })
 

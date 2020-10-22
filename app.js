@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt')
 const dotenv = require('dotenv')
 const mongoose = require('mongoose')
 const user = require('./models/user')
+const application = require('./models/application')
 const jwt = require('jsonwebtoken')
 app.use(express.json())
 app.use(cookieParser())
@@ -43,6 +44,7 @@ try {
         })
 } catch (error) {
     console.log(`Error while connecting to DB: ${error}`)
+    console.log('Please Ensure a proper connection to DB first')
 }
 
 app.get('/', (req, res) => {
@@ -60,7 +62,9 @@ app.post('/login', (req, res) => {
                 var accessToken = jwt.sign(
                     { foo: 'bar' },
                     process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
-                    { expiresIn: '20s' }
+                    {
+                        expiresIn: '20s',
+                    }
                 )
                 var refreshToken = jwt.sign(
                     { foo: 'bar' },
@@ -101,14 +105,16 @@ app.post('/token', (req, res) => {
         const accessToken = jwt.sign(
             { data: 'data' },
             process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
-            { expiresIn: '20s' }
+            {
+                expiresIn: '20s',
+            }
         )
 
         res.json({ accessToken })
     })
 })
 //authentication middleware
-const authenticateJWT = (req, res, next) => {
+const authenticateRequest = (req, res, next) => {
     const authHeader = req.headers.authorization
     if (authHeader) {
         const token = authHeader.split(' ')[1]
@@ -151,7 +157,7 @@ const authenticateJWT = (req, res, next) => {
     }
 }
 
-app.post('/getdata', authenticateJWT, (req, res) => {
+app.post('/getdata', authenticateRequest, (req, res) => {
     const authHeader = req.headers.authorization
     const token = authHeader.split(' ')[1]
     jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, data) => {
@@ -160,7 +166,9 @@ app.post('/getdata', authenticateJWT, (req, res) => {
                 const newAccessToken = jwt.sign(
                     { data: 'data' },
                     process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
-                    { expiresIn: '20s' }
+                    {
+                        expiresIn: '20s',
+                    }
                 )
                 res.json([
                     { book1: 'harrypotter', book2: 'dungeon' },
@@ -179,15 +187,19 @@ app.post('/getdata', authenticateJWT, (req, res) => {
 const registrationPreCheck = async (req, res, next) => {
     if (!(req.body.hasOwnProperty(`email`) && req.body.email != ''))
         return res.sendStatus(400)
-    if (!(req.body.hasOwnProperty(`name`) && req.body.userName != ''))
+    if (!(req.body.hasOwnProperty(`name`) && req.body.name != ''))
         return res.sendStatus(400)
     if (!(req.body.hasOwnProperty(`password`) && req.body.password != ''))
         return res.sendStatus(400)
     if (!(req.body.hasOwnProperty('userType') && req.body.userType != ''))
         return res.sendStatus(400)
-    if (req.body.userType != 'admin' || req.body.userType != 'customer')
+    console.log(req.body.userType)
+    console.log(typeof req.body.userType)
+    if (req.body.userType !== 'admin' && req.body.userType !== 'customer') {
+        console.log('tatti')
         return res.sendStatus(400)
-    if (req.body.userType == 'customer') {
+    }
+    if (req.body.userType === 'customer') {
         console.log(req.body.userId)
         if (
             !(
@@ -228,16 +240,71 @@ app.post('/register', registrationPreCheck, (req, res) => {
 
 const checkApplicationForm = (req, res, next) => {
     // TODO
-    if (Object.keys(req.body).length == 0) res.sendStatus(400)
-    next()
+    if (!req.body.hasOwnProperty('submitted_by') && req.body.submitted_by != '')
+        return res.sendStatus(400)
+    if (!req.body.hasOwnProperty('on_behalf') && req.body.on_behalf != '')
+        return res.sendStatus(400)
+    if (!req.body.hasOwnProperty('tenure')) return res.sendStatus(400)
+    if (!req.body.hasOwnProperty('stage')) return res.sendStatus(400)
+
+    // check if application of user already exists
+    let applications = application
+        .countDocuments({
+            submitted_by: req.body.submitted_by,
+            on_behalf: req.body.on_behalf,
+        })
+        .exec()
+
+    applications
+        .then((e) => {
+            console.log('application', e)
+            if (e !== 0) {
+                console.log('sending 269')
+                return res.sendStatus(403)
+            } else {
+                next()
+            }
+        })
+        .catch((e) => console.log(e))
 }
 
-app.post('/submit', authenticateJWT, checkApplicationForm, (req, res) => {
-    // TODO - add form to the db
-
-    // return 200
-    res.sendStatus(200)
-})
+app.post(
+    '/submit',
+    authenticateRequest,
+    checkApplicationForm,
+    async (req, res) => {
+        // TODO - add form to the db
+        let application_instance = new application()
+        const submitted_by = user.findById(req.body.submitted_by).exec()
+        const on_behalf = user.findById(req.body.on_behalf).exec()
+        const promisis = [submitted_by, on_behalf]
+        Promise.all(promisis)
+            .then((re) => {
+                let if_any_null = false
+                re.forEach((doc) => {
+                    if (doc === null) {
+                        if_any_null = true
+                    }
+                })
+                if (if_any_null) {
+                    res.sendStatus(403)
+                } else {
+                    application_instance.submitted_by = re[0]._id
+                    application_instance.on_behalf = re[1]._id
+                    application_instance.stage = req.body.stage
+                    application_instance.tenure = req.body.terune
+                    application_instance.save((err) => {
+                        if (err) return res.sendStatus(500)
+                        res.sendStatus(200)
+                    })
+                }
+            })
+            .catch((r) => {
+                console.log('error in finding on_behalf:', r)
+                res.sendStatus(403)
+            })
+    }
+)
 
 app.post('/logout', (req, res) => {
     const { token } = req.body
