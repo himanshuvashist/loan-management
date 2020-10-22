@@ -2,11 +2,23 @@ const mongoose = require('mongoose')
 const ObjectId = mongoose.Schema.ObjectId
 
 const application_schema = new mongoose.Schema({
-    id: ObjectId,
-    user_id: ObjectId,
-    approved_by: ObjectId,
+    on_behalf:{
+        type:ObjectId,
+        ref:'user_model'
+    },
+    submitted_by: {
+        type: ObjectId,
+        ref: 'user_model',
+    },
+    approved_by: {
+        type: ObjectId,
+        ref: 'user_model',
+    },
     stage: Number,
-    date: Date,
+    date: {
+        type: Date,
+        Default: Date.now,
+    },
 })
 
 const application_model = mongoose.model('application', application_schema)
