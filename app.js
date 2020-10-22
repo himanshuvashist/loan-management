@@ -183,6 +183,20 @@ const registrationPreCheck = async (req, res, next) => {
         return res.sendStatus(400)
     if (!(req.body.hasOwnProperty(`password`) && req.body.password != ''))
         return res.sendStatus(400)
+    if (!(req.body.hasOwnProperty('userType') && req.body.userType != ''))
+        return res.sendStatus(400)
+    if (req.body.userType != 'admin' || req.body.userType != 'customer')
+        return res.sendStatus(400)
+    if (req.body.userType == 'customer') {
+        console.log(req.body.userId)
+        if (
+            !(
+                req.body.hasOwnProperty('adminId') &&
+                typeof req.body.adminId === 'number'
+            )
+        )
+            return res.sendStatus(400)
+    }
 
     let r = await user.countDocuments({ email: req.body.email })
     if (r) return res.sendStatus(403)
@@ -199,16 +213,17 @@ app.post('/register', registrationPreCheck, (req, res) => {
         const user_instance = new user()
         user_instance.userName = req.body.name
         user_instance.password = hash
-        user_instance.date = Date.now()
         user_instance.email = req.body.email
+        user_instance.userType = req.body.userType
         user_instance.save((err) => {
             if (err) {
-                console.log('Error in inserting')
-                res.send('error')
+                console.log('Error in inserting', err)
+                res.sendStatus(403)
+            } else {
+                res.send({ response: 'successfully inserted' })
             }
         })
     })
-    res.send({ response: 'successfully inserted' })
 })
 
 const checkApplicationForm = (req, res, next) => {
