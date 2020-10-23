@@ -220,6 +220,7 @@ const checkApplicationForm = (req, res, next) => {
       return res.sendStatus(500);
     } else if (!docs || docs.userType !== 'agent') {
       return res.sendStatus(403);
+      ('receiving');
     } else {
       // check if application of user for the user already exists
       application.countDocuments(
@@ -298,6 +299,60 @@ app.post('/promotion', authenticateRequest, PromotionPreCheck, (req, res) => {
       res.sendStatus(200);
     }
   });
+});
+
+const applicationStatusUpdatePreCheck = (req, res, next) => {
+  if (!(req.body.hasOwnProperty(`applicationId`) && req.body.applicationId != ''))
+    return res.sendStatus(400);
+  if (!req.body.hasOwnProperty('approve')) return res.sendStatus(400);
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
+  if (decoded.userType === 'admin') {
+    next();
+  } else {
+    return res.sendStatus(403);
+  }
+};
+app.post(
+  '/applicationstatusupdate',
+  authenticateRequest,
+  applicationStatusUpdatePreCheck,
+  (req, res) => {
+    // TODO
+    application.findById(req.body.applicationId, (err, data) => {
+      if (err) {
+        res.sendStatus(403);
+      } else if (data.stage !== 1) {
+        // if last stage(approved or rejected) give forbidden
+        res.sendStatus(403);
+      } else {
+        let updatedApplication = new application();
+        // copy all keys from old applicaiton
+        updatedApplication.on_behalf = data.on_behalf;
+        updatedApplication.submitted_by = data.submitted_by;
+        updatedApplication.approved_by = data.approved_by;
+        updatedApplication.tenure = data.tenure;
+        updatedApplication.stage = req.body.approve ? 2 : 3;
+        updatedApplication.save(err => {
+          if (err) {
+            res.sendStatus(403);
+          } else {
+            res.sendStatus(200);
+          }
+        });
+      }
+    });
+    res.sendStatus(200);
+  }
+);
+
+app.post('/applicationupdate', (req, res) => {
+  // TODO
+});
+
+app.post('/edituser', (req, res) => {
+  // TODO
 });
 
 app.post('/logout', (req, res) => {
