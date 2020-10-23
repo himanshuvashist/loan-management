@@ -59,9 +59,13 @@ app.post('/login', (req, res) => {
       bcrypt.compare(req.body.password, docs.password, (err, result) => {
         if (err) return res.sendStatus(500);
 
-        var accessToken = jwt.sign({foo: 'bar'}, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, {
-          expiresIn: '20s',
-        });
+        var accessToken = jwt.sign(
+          {id: docs._id, userType: docs.userType},
+          process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
+          {
+            expiresIn: '20m',
+          }
+        );
         var refreshToken = jwt.sign({foo: 'bar'}, process.env.JWT_REFRESH_TOKEN_SECRET_KEY);
 
         console.log(accessToken);
@@ -170,9 +174,8 @@ const registrationPreCheck = async (req, res, next) => {
     return res.sendStatus(400);
   }
   if (req.body.userType === 'customer') {
-    console.log(req.body.userId);
-    if (!(req.body.hasOwnProperty('adminId') && typeof req.body.adminId === 'number'))
-      return res.sendStatus(400);
+    console.log(req.body.adminId);
+    if (!req.body.hasOwnProperty('adminId')) return res.sendStatus(400);
   }
 
   let r = await user.countDocuments({email: req.body.email});
@@ -211,25 +214,31 @@ const checkApplicationForm = (req, res, next) => {
   if (!req.body.hasOwnProperty('tenure')) return res.sendStatus(400);
   if (!req.body.hasOwnProperty('stage')) return res.sendStatus(400);
 
-  // check if application of user already exists
-  let applications = application
-    .countDocuments({
-      submitted_by: req.body.submitted_by,
-      on_behalf: req.body.on_behalf,
-    })
-    .exec();
-
-  applications
-    .then(e => {
-      console.log('application', e);
-      if (e !== 0) {
-        console.log('sending 269');
-        return res.sendStatus(403);
-      } else {
-        next();
-      }
-    })
-    .catch(e => console.log(e));
+  //check if application is being submitted by the agent only
+  user.findOne({userName: req.body.submitted_by}, (err, docs) => {
+    if (err) {
+      return res.sendStatus(500);
+    } else if (!docs || docs.userType !== 'agent') {
+      return res.sendStatus(403);
+    } else {
+      // check if application of user for the user already exists
+      application.countDocuments(
+        {
+          submitted_by: req.body.submitted_by,
+          on_behalf: req.body.on_behalf,
+        },
+        (err, count) => {
+          if (err) {
+            return res.sendStatus(500);
+          } else if (count !== 0) {
+            return res.sendStatus(403);
+          } else {
+            next();
+          }
+        }
+      );
+    }
+  });
 };
 
 app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) => {
@@ -263,6 +272,32 @@ app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) 
       console.log('error in finding on_behalf:', r);
       res.sendStatus(403);
     });
+});
+
+const PromotionPreCheck = (req, res, next) => {
+  if (!(req.body.hasOwnProperty(`email`) && req.body.email != '')) return res.sendStatus(400);
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, decoded) => {
+    if (err) return res.sendStatus(403);
+    console.log('decoded', decoded);
+    if (decoded.userType !== 'admin') {
+      return res.sendStatus(403);
+    } else {
+      next();
+    }
+  });
+};
+app.post('/promotion', authenticateRequest, PromotionPreCheck, (req, res) => {
+  user.findOneAndUpdate({email: req.body.email}, {userType: 'agent'}, (err, docs) => {
+    if (err) {
+      console.log(err);
+      res.sendStatus(500);
+    } else {
+      console.log(docs);
+      res.sendStatus(200);
+    }
+  });
 });
 
 app.post('/logout', (req, res) => {
