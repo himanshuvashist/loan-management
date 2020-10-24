@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 
 const application_schema = new mongoose.Schema({
-  application_id:{
-    type:ObjectId,
+  application_id: {
+    type: ObjectId,
   },
   on_behalf: {
     type: ObjectId,
@@ -17,8 +17,9 @@ const application_schema = new mongoose.Schema({
     type: ObjectId,
     ref: 'user_model',
   },
-  stage: Number,
+  status: {type: String, default: "new"},
   tenure: Number,
+  amount: Number,
   date: {
     type: Date,
     default: Date.now,

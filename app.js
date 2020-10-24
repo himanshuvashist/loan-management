@@ -77,7 +77,13 @@ app.post('/login', (req, res) => {
             expires: new Date(Date.now() + 900000),
             httpOnly: true,
           });
-          return res.json({accessToken, refreshToken, loggedin: 1, userType: docs.userType});
+          return res.json({
+            accessToken,
+            refreshToken,
+            loggedin: 1,
+            userType: docs.userType,
+            userName: docs.userName,
+          });
         }
         return res.json({loggedin: 0});
       });
@@ -252,7 +258,8 @@ app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) 
         application_instance.submitted_by = re[0]._id;
         application_instance.on_behalf = re[1]._id;
         application_instance.stage = req.body.stage;
-        application_instance.tenure = req.body.terune;
+        application_instance.tenure = req.body.tenure;
+        application_instance.amount = req.body.amount;
         application_instance.save(err => {
           if (err) return res.sendStatus(500);
           res.sendStatus(200);
@@ -294,11 +301,12 @@ app.post('/promotion', authenticateRequest, PromotionPreCheck, (req, res) => {
 const applicationStatusUpdatePreCheck = (req, res, next) => {
   if (!(req.body.hasOwnProperty(`applicationId`) && req.body.applicationId != ''))
     return res.sendStatus(400);
-  if (!req.body.hasOwnProperty('approve')) return res.sendStatus(400);
+  if (!req.body.hasOwnProperty('approved')) return res.sendStatus(400);
   const authHeader = req.headers.authorization;
   const token = authHeader.split(' ')[1];
   const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
   if (decoded.userType === 'admin') {
+    req.body.approved_by = decoded_id;
     next();
   } else {
     return res.sendStatus(403);
@@ -310,60 +318,49 @@ app.post(
   applicationStatusUpdatePreCheck,
   (req, res) => {
     // TODO
-    application.findById(req.body.applicationId, (err, data) => {
-      if (err) {
-        res.sendStatus(403);
-      } else if (data.stage !== 1) {
-        // if last stage(approved or rejected) give forbidden
-        res.sendStatus(403);
-      } else {
-        let updatedApplication = new application();
-        // copy all keys from old applicaiton
-        updatedApplication.on_behalf = data.on_behalf;
-        updatedApplication.submitted_by = data.submitted_by;
-        updatedApplication.approved_by = data.approved_by;
-        updatedApplication.tenure = data.tenure;
-        updatedApplication.stage = req.body.approve ? 2 : 3;
-        updatedApplication.save(err => {
-          if (err) {
-            res.sendStatus(403);
-          } else {
-            res.sendStatus(200);
-          }
-        });
-      }
-    });
-    res.sendStatus(200);
-  }
-);
 
-const updatePreCheck = (req, res, next) => {
-  next();
-};
-
-app.post('/applicationupdate', authenticateRequest, updatePreCheck, (req, res) => {
-  // TODO
-  application.findById(req.body.applicationId, (err, data) => {
-    if (err) {
-      res.sendStatus(403);
-    } else {
-      let updatedApplication = new application();
-      // copy all keys from old applicaiton
-      updatedApplication.on_behalf = req.body.on_behalf;
-      updatedApplication.submitted_by = req.body.submitted_by;
-      updatedApplication.approved_by = req.body.approved_by;
-      updatedApplication.tenure = req.body.tenure;
-      updatedApplication.stage = req.body.approve;
-      updatedApplication.save(err => {
+    application.findByIdAndUpdate(
+      req.body.applicationId,
+      {status: req.body.approved ? 'approved' : 'rejected', approved_by: req.body.approved_by},
+      (err, data) => {
         if (err) {
           res.sendStatus(403);
         } else {
           res.sendStatus(200);
         }
-      });
+      }
+    );
+  }
+);
+
+const updatePreCheck = (req, res, next) => {
+  if (!(req.body.hasOwnProperty(`applicationId`) && req.body.applicationId != ''))
+    return res.sendStatus(400);
+  if (!(req.body.hasOwnProperty(`tenure`) && req.body.tenure != 0)) return res.sendStatus(400);
+  if (!(req.body.hasOwnProperty(`amount`) && req.body.amount != 0)) return res.sendStatus(400);
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
+  if (decoded.userType === 'agent') {
+    next();
+  } else {
+    res.sendStatus(403);
+  }
+};
+
+app.post('/applicationupdate', authenticateRequest, updatePreCheck, (req, res) => {
+  // TODO
+  application.findByIdAndUpdate(
+    req.body.applicationId,
+    {amount: req.body.amount, tenure: req.body.tenure},
+    (err, data) => {
+      if (err) {
+        res.sendStatus(403);
+      } else {
+        res.sendStatus(200);
+      }
     }
-  });
-  res.sendStatus(200);
+  );
 });
 
 app.post('/edituser', (req, res) => {
@@ -410,6 +407,54 @@ app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
   }
 });
 
+const applicationlistPreCheck = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  req.body.userId = jwt.decode(token).id;
+  user.findById(req.body.userId, (err, docs) => {
+    if (err) {
+      res.sendStatus(500);
+    } else if (docs === null) {
+      res.sendStatus(404);
+    } else {
+      req.body.userType = docs.userType;
+      next();
+    }
+  });
+};
+
+app.post('/applicationlist', authenticateRequest, applicationlistPreCheck, (req, res) => {
+  console.log(req.body);
+  if (req.body.userType === 'customer') {
+    application.find({on_behalf: req.body.userId}, (err, docs) => {
+      if (err) {
+        res.sendStatus(500);
+      } else if (docs === null) {
+        res.sendStatus(404);
+      } else {
+        console.log('=============');
+        console.log(docs);
+        const l = docs.filter(doc => doc._id.toString() === doc.application_id.toString());
+        console.log(l);
+        res.json(l);
+      }
+    });
+  } else {
+    application.find({}, (err, docs) => {
+      if (err) {
+        res.sendStatus(500);
+      } else if (docs === null) {
+        res.sendStatus(404);
+      } else {
+        console.log('-------------');
+        console.log(docs);
+        const l = docs.filter(doc => doc._id.toString() === doc.application_id.toString());
+        console.log(l);
+        res.json(l);
+      }
+    });
+  }
+});
 app.post('/logout', (req, res) => {
   const {token} = req.body;
 
