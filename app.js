@@ -347,12 +347,86 @@ app.post(
   }
 );
 
-app.post('/applicationupdate', (req, res) => {
+const updatePreCheck = (req, res, next) => {
+  next();
+};
+
+app.post('/applicationupdate', authenticateRequest, updatePreCheck, (req, res) => {
   // TODO
+  application.findById(req.body.applicationId, (err, data) => {
+    if (err) {
+      res.sendStatus(403);
+    } else {
+      let updatedApplication = new application();
+      // copy all keys from old applicaiton
+      updatedApplication.on_behalf = req.body.on_behalf;
+      updatedApplication.submitted_by = req.body.submitted_by;
+      updatedApplication.approved_by = req.body.approved_by;
+      updatedApplication.tenure = req.body.tenure;
+      updatedApplication.stage = req.body.approve;
+      updatedApplication.save(err => {
+        if (err) {
+          res.sendStatus(403);
+        } else {
+          res.sendStatus(200);
+        }
+      });
+    }
+  });
+  res.sendStatus(200);
 });
 
 app.post('/edituser', (req, res) => {
   // TODO
+});
+
+const userListPreCheck = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
+  req.userType = decoded.userType;
+  next();
+};
+app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
+  if (req.userType === 'admin') {
+    // send all customer and agents
+    let agents;
+    user.find({userType: 'agent'}, (err, docs) => {
+      if (err) {
+        res.sendStatus(500);
+      } else {
+        console.log(docs);
+        console.log(agents);
+        agents = docs;
+
+        user.find({userType: 'customer'}, (err, docs) => {
+          if (err) {
+            res.sendStatus(500);
+          } else {
+            customers = docs;
+            console.log(agents);
+            console.log(customers);
+            res.json([...agents, ...customers]);
+          }
+        });
+      }
+    });
+    let customers;
+  } else if (req.userType === 'agent') {
+    // send all customers
+    let customers;
+    user.find({userType: 'customer'}, (err, docs) => {
+      if (err) {
+        res.sendStatus(500);
+      } else {
+        customers = docs;
+      }
+    });
+
+    res.json([...customers]);
+  } else {
+    res.sendStatus(403);
+  }
 });
 
 app.post('/logout', (req, res) => {
