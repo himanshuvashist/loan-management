@@ -77,7 +77,7 @@ app.post('/login', (req, res) => {
             expires: new Date(Date.now() + 900000),
             httpOnly: true,
           });
-          return res.json({accessToken, refreshToken, loggedin: 1});
+          return res.json({accessToken, refreshToken, loggedin: 1, userType: docs.userType});
         }
         return res.json({loggedin: 0});
       });
@@ -163,17 +163,14 @@ app.post('/getdata', authenticateRequest, (req, res) => {
 
 //registraion middlewares
 const registrationPreCheck = async (req, res, next) => {
+  console.log(req.body);
   if (!(req.body.hasOwnProperty(`email`) && req.body.email != '')) return res.sendStatus(400);
   if (!(req.body.hasOwnProperty(`name`) && req.body.name != '')) return res.sendStatus(400);
   if (!(req.body.hasOwnProperty(`password`) && req.body.password != '')) return res.sendStatus(400);
-  if (!(req.body.hasOwnProperty('userType') && req.body.userType != '')) return res.sendStatus(400);
-  console.log(req.body.userType);
-  console.log(typeof req.body.userType);
-  if (req.body.userType !== 'admin' && req.body.userType !== 'customer') {
-    console.log('tatti');
+  if (!req.body.hasOwnProperty('adminRegistration')) {
     return res.sendStatus(400);
   }
-  if (req.body.userType === 'customer') {
+  if (!req.body.adminRegistration) {
     console.log(req.body.adminId);
     if (!req.body.hasOwnProperty('adminId')) return res.sendStatus(400);
   }
@@ -194,7 +191,10 @@ app.post('/register', registrationPreCheck, (req, res) => {
     user_instance.userName = req.body.name;
     user_instance.password = hash;
     user_instance.email = req.body.email;
-    user_instance.userType = req.body.userType;
+    if (!req.body.adminRegistration) {
+      user_instance.registeredUnder = req.body.adminId;
+    }
+    user_instance.userType = req.body.adminRegistration ? 'admin' : 'customer';
     user_instance.save(err => {
       if (err) {
         console.log('Error in inserting', err);
@@ -208,36 +208,22 @@ app.post('/register', registrationPreCheck, (req, res) => {
 
 const checkApplicationForm = (req, res, next) => {
   // TODO
-  if (!req.body.hasOwnProperty('submitted_by') && req.body.submitted_by != '')
-    return res.sendStatus(400);
   if (!req.body.hasOwnProperty('on_behalf') && req.body.on_behalf != '') return res.sendStatus(400);
-  if (!req.body.hasOwnProperty('tenure')) return res.sendStatus(400);
-  if (!req.body.hasOwnProperty('stage')) return res.sendStatus(400);
+  if (!req.body.hasOwnProperty('tenure') && req.body.tenure !== 0) return res.sendStatus(400);
+  if (!req.body.hasOwnProperty('amount') && req.body.amount !== 0) return res.sendStatus(400);
 
   //check if application is being submitted by the agent only
-  user.findOne({userName: req.body.submitted_by}, (err, docs) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  const decoded = jwt.decode(token);
+  user.findById(decoded.id, (err, docs) => {
     if (err) {
       return res.sendStatus(500);
     } else if (!docs || docs.userType !== 'agent') {
       return res.sendStatus(403);
-      ('receiving');
     } else {
-      // check if application of user for the user already exists
-      application.countDocuments(
-        {
-          submitted_by: req.body.submitted_by,
-          on_behalf: req.body.on_behalf,
-        },
-        (err, count) => {
-          if (err) {
-            return res.sendStatus(500);
-          } else if (count !== 0) {
-            return res.sendStatus(403);
-          } else {
-            next();
-          }
-        }
-      );
+      req.body.submitted_by = decoded.id;
+      next();
     }
   });
 };
@@ -245,20 +231,24 @@ const checkApplicationForm = (req, res, next) => {
 app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) => {
   // TODO - add form to the db
   let application_instance = new application();
+  console.log('submitted_by', req.body.submitted_by);
   const submitted_by = user.findById(req.body.submitted_by).exec();
-  const on_behalf = user.findById(req.body.on_behalf).exec();
+  const on_behalf = user.findOne({email: req.body.on_behalf}).exec();
   const promisis = [submitted_by, on_behalf];
   Promise.all(promisis)
     .then(re => {
       let if_any_null = false;
       re.forEach(doc => {
+        console.log('jadu', doc);
         if (doc === null) {
           if_any_null = true;
         }
       });
       if (if_any_null) {
+        console.log('hoi');
         res.sendStatus(403);
       } else {
+        application_instance.application_id = application_instance._id;
         application_instance.submitted_by = re[0]._id;
         application_instance.on_behalf = re[1]._id;
         application_instance.stage = req.body.stage;
@@ -390,20 +380,14 @@ const userListPreCheck = (req, res, next) => {
 app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
   if (req.userType === 'admin') {
     // send all customer and agents
-    let agents;
-    user.find({userType: 'agent'}, (err, docs) => {
+    user.find({userType: 'agent'}, (err, agents) => {
       if (err) {
         res.sendStatus(500);
       } else {
-        console.log(docs);
-        console.log(agents);
-        agents = docs;
-
-        user.find({userType: 'customer'}, (err, docs) => {
+        user.find({userType: 'customer'}, (err, customers) => {
           if (err) {
             res.sendStatus(500);
           } else {
-            customers = docs;
             console.log(agents);
             console.log(customers);
             res.json([...agents, ...customers]);
@@ -411,19 +395,16 @@ app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
         });
       }
     });
-    let customers;
   } else if (req.userType === 'agent') {
     // send all customers
-    let customers;
-    user.find({userType: 'customer'}, (err, docs) => {
+    user.find({userType: 'customer'}, (err, customers) => {
       if (err) {
         res.sendStatus(500);
       } else {
-        customers = docs;
+        console.log(customers);
+        res.json([...customers]);
       }
     });
-
-    res.json([...customers]);
   } else {
     res.sendStatus(403);
   }

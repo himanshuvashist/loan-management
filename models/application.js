@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 
 const application_schema = new mongoose.Schema({
+  application_id:{
+    type:ObjectId,
+  },
   on_behalf: {
     type: ObjectId,
     ref: 'user_model',
