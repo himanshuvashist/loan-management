@@ -32,7 +32,7 @@ describe('Db insertion', () => {
   });
   it(`removing the inserted user`, async () => {
     const users = await db.collection('users');
-    await users.remove(mockUser).then(r => {
+    await users.deleteOne(mockUser).then(r => {
       expect(r.result.n).toEqual(1);
     });
   });
