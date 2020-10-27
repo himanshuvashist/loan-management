@@ -84,11 +84,11 @@ describe('Test /getdata path', () => {});
 describe('Test /logout path', () => {});
 
 describe('Test /submit path', () => {
-    it(`get 400 on sending no body`, (done) => {
+    it(`get 401 on sending no body`, (done) => {
         request(app)
             .post('/submit')
             .then((res) => {
-                expect(res.statusCode).toEqual(400)
+                expect(res.statusCode).toEqual(401)
                 done()
             })
     })
