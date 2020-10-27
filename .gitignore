@@ -37,3 +37,7 @@ yarn-error.log*
 .env
 .rest
 globalConfig.json
+
+Client/
+**/Client/*
+Client/*
