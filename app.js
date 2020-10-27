@@ -90,25 +90,6 @@ app.post('/login', (req, res) => {
   }
 });
 
-app.post('/token', (req, res) => {
-  const {token} = req.body;
-
-  if (!token) {
-    return res.sendStatus(401);
-  }
-  // if DB does not contains the RequestToken in it then
-  // return res.sendStatus(403)
-
-  jwt.verify(token, process.env.JWT_REFRESH_TOKEN_SECRET_KEY, (err, data) => {
-    if (err) return res.sendStatus(403);
-
-    const accessToken = jwt.sign({data: 'data'}, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, {
-      expiresIn: '20s',
-    });
-
-    res.json({accessToken});
-  });
-});
 //authentication middleware
 const authenticateRequest = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -138,26 +119,6 @@ const authenticateRequest = (req, res, next) => {
     res.sendStatus(401); // unauthorized
   }
 };
-
-app.post('/getdata', authenticateRequest, (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, data) => {
-    if (err) {
-      if (err.name === 'TokenExpiredError') {
-        const newAccessToken = jwt.sign({data: 'data'}, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, {
-          expiresIn: '20s',
-        });
-        res.json([{book1: 'harrypotter', book2: 'dungeon'}, newAccessToken]);
-      } else {
-        res.json(402);
-      }
-    } else {
-      res.json([{book1: 'harrypotter', book2: 'dungeon'}]);
-    }
-  });
-});
-
 //registraion middlewares
 const registrationPreCheck = async (req, res, next) => {
   if (!(req.body.hasOwnProperty(`email`) && req.body.email != '')) return res.sendStatus(400);
