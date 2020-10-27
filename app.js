@@ -68,9 +68,6 @@ app.post('/login', (req, res) => {
         );
         var refreshToken = jwt.sign({foo: 'bar'}, process.env.JWT_REFRESH_TOKEN_SECRET_KEY);
 
-        console.log(accessToken);
-        console.log(refreshToken);
-
         if (result) {
           //  set cookie flag secure in production
           res.cookie('token', refreshToken, {
@@ -120,14 +117,10 @@ const authenticateRequest = (req, res, next) => {
 
     jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, data) => {
       if (err) {
-        console.log(`Error ${err}`);
-        console.log(typeof err);
-        console.log(err.name);
         if (err.name === 'TokenExpiredError') {
           const refreshToken = req.cookies.token;
           jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET_KEY, (err, data) => {
             if (err) {
-              console.log(`Refresh token error: ${err}`);
               res.sendStatus(401);
             } else {
               next();
@@ -137,9 +130,7 @@ const authenticateRequest = (req, res, next) => {
           return res.sendStatus(403); //forbidden
         }
       } else {
-        console.log(data);
         data.user = user;
-        console.log(data);
         next();
       }
     });
@@ -169,7 +160,6 @@ app.post('/getdata', authenticateRequest, (req, res) => {
 
 //registraion middlewares
 const registrationPreCheck = async (req, res, next) => {
-  console.log(req.body);
   if (!(req.body.hasOwnProperty(`email`) && req.body.email != '')) return res.sendStatus(400);
   if (!(req.body.hasOwnProperty(`name`) && req.body.name != '')) return res.sendStatus(400);
   if (!(req.body.hasOwnProperty(`password`) && req.body.password != '')) return res.sendStatus(400);
@@ -177,7 +167,6 @@ const registrationPreCheck = async (req, res, next) => {
     return res.sendStatus(400);
   }
   if (!req.body.adminRegistration) {
-    console.log(req.body.adminId);
     if (!req.body.hasOwnProperty('adminId')) return res.sendStatus(400);
   }
 
@@ -203,7 +192,6 @@ app.post('/register', registrationPreCheck, (req, res) => {
     user_instance.userType = req.body.adminRegistration ? 'admin' : 'customer';
     user_instance.save(err => {
       if (err) {
-        console.log('Error in inserting', err);
         res.sendStatus(403);
       } else {
         res.send({response: 'successfully inserted'});
@@ -237,7 +225,6 @@ const checkApplicationForm = (req, res, next) => {
 app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) => {
   // TODO - add form to the db
   let application_instance = new application();
-  console.log('submitted_by', req.body.submitted_by);
   const submitted_by = user.findById(req.body.submitted_by).exec();
   const on_behalf = user.findOne({email: req.body.on_behalf}).exec();
   const promisis = [submitted_by, on_behalf];
@@ -245,13 +232,11 @@ app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) 
     .then(re => {
       let if_any_null = false;
       re.forEach(doc => {
-        console.log('jadu', doc);
         if (doc === null) {
           if_any_null = true;
         }
       });
       if (if_any_null) {
-        console.log('hoi');
         res.sendStatus(403);
       } else {
         application_instance.application_id = application_instance._id;
@@ -267,7 +252,6 @@ app.post('/submit', authenticateRequest, checkApplicationForm, async (req, res) 
       }
     })
     .catch(r => {
-      console.log('error in finding on_behalf:', r);
       res.sendStatus(403);
     });
 });
@@ -278,7 +262,6 @@ const PromotionPreCheck = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY, (err, decoded) => {
     if (err) return res.sendStatus(403);
-    console.log('decoded', decoded);
     if (decoded.userType !== 'admin') {
       return res.sendStatus(403);
     } else {
@@ -289,10 +272,8 @@ const PromotionPreCheck = (req, res, next) => {
 app.post('/promotion', authenticateRequest, PromotionPreCheck, (req, res) => {
   user.findOneAndUpdate({email: req.body.email}, {userType: 'agent'}, (err, docs) => {
     if (err) {
-      console.log(err);
       res.sendStatus(500);
     } else {
-      console.log(docs);
       res.sendStatus(200);
     }
   });
@@ -306,7 +287,7 @@ const applicationStatusUpdatePreCheck = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
   if (decoded.userType === 'admin') {
-    req.body.approved_by = decoded_id;
+    req.body.approved_by = decoded._id;
     next();
   } else {
     return res.sendStatus(403);
@@ -349,22 +330,91 @@ const updatePreCheck = (req, res, next) => {
 };
 
 app.post('/applicationupdate', authenticateRequest, updatePreCheck, (req, res) => {
-  // TODO
-  application.findByIdAndUpdate(
-    req.body.applicationId,
-    {amount: req.body.amount, tenure: req.body.tenure},
-    (err, data) => {
-      if (err) {
-        res.sendStatus(403);
+  application.find({application_id: req.body.applicationId}, (err, data) => {
+    if (err) {
+      return res.sendStatus(500);
+    } else if (data.length === 1) {
+      let application_instance = new application();
+      application_instance.application_id = data[0]._id;
+      application_instance.submitted_by = data[0].submitted_by;
+      application_instance.on_behalf = data[0].on_behalf;
+      application_instance.approved_by = data[0].approved_by;
+      application_instance.status = data[0].status;
+      application_instance.date = data[0].date;
+      application_instance.amount = data[0].amount;
+      application_instance.tenure = data[0].tenure;
+      application_instance.save(err => {
+        if (err) {
+          return res.sendStatus(500);
+        } else {
+          data[0].tenure = req.body.tenure;
+          data[0].amount = req.body.amount;
+          data[0].date = Date.now();
+          data[0].save(err => {
+            if (err) {
+              return res.sendStatus(500);
+            } else {
+              return res.sendStatus(200);
+            }
+          });
+        }
+      });
+    } else if (data.length === 2) {
+      let n = 0;
+      let o = 0;
+      if (data[0]._id.toString() === data[0].application_id.toString()) {
+        o = 1;
       } else {
-        res.sendStatus(200);
+        n = 1;
       }
+      data[o].amount = data[n].amount;
+      data[o].tenure = data[n].tenure;
+      data[o].save(err => {
+        if (err) {
+          return res.sendStatus(500);
+        } else {
+          data[n].amount = req.body.amount;
+          data[n].tenure = req.body.tenure;
+          data[n].save(err => {
+            if (err) {
+              return res.sendStatus(500);
+            } else {
+              return res.sendStatus(200);
+            }
+          });
+        }
+      });
+    } else {
+      res.send('some else is happening');
     }
-  );
+  });
 });
 
-app.post('/edituser', (req, res) => {
+const editUserPreCheck = (req, res, next) => {
+  if (!req.body.hasOwnProperty('email') && req.body.email === '') {
+    return res.sendStatus(403);
+  }
+  if (!req.body.hasOwnProperty('userName') && req.body.userName === '') {
+    return res.sendStatus(403);
+  }
+  const authHeader = req.headers.authorization;
+  const token = authHeader.split(' ')[1];
+  const decoded = jwt.decode(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
+  if (decoded.userType === 'agent' || decoded.userType === 'admin') {
+    next();
+  } else {
+    res.sendStatus(403);
+  }
+};
+app.post('/edituser', authenticateRequest, editUserPreCheck, (req, res) => {
   // TODO
+  user.findOneAndUpdate({email: req.body.email}, {userName: req.body.userName}, (err, docs) => {
+    if (err) {
+      res.sendStatus(500);
+    } else {
+      res.sendStatus(200);
+    }
+  });
 });
 
 const userListPreCheck = (req, res, next) => {
@@ -385,8 +435,6 @@ app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
           if (err) {
             res.sendStatus(500);
           } else {
-            console.log(agents);
-            console.log(customers);
             res.json([...agents, ...customers]);
           }
         });
@@ -398,7 +446,6 @@ app.post('/userlist', authenticateRequest, userListPreCheck, (req, res) => {
       if (err) {
         res.sendStatus(500);
       } else {
-        console.log(customers);
         res.json([...customers]);
       }
     });
@@ -424,7 +471,6 @@ const applicationlistPreCheck = (req, res, next) => {
 };
 
 app.post('/applicationlist', authenticateRequest, applicationlistPreCheck, (req, res) => {
-  console.log(req.body);
   if (req.body.userType === 'customer') {
     application.find({on_behalf: req.body.userId}, (err, docs) => {
       if (err) {
@@ -432,10 +478,7 @@ app.post('/applicationlist', authenticateRequest, applicationlistPreCheck, (req,
       } else if (docs === null) {
         res.sendStatus(404);
       } else {
-        console.log('=============');
-        console.log(docs);
         const l = docs.filter(doc => doc._id.toString() === doc.application_id.toString());
-        console.log(l);
         res.json(l);
       }
     });
@@ -446,10 +489,7 @@ app.post('/applicationlist', authenticateRequest, applicationlistPreCheck, (req,
       } else if (docs === null) {
         res.sendStatus(404);
       } else {
-        console.log('-------------');
-        console.log(docs);
         const l = docs.filter(doc => doc._id.toString() === doc.application_id.toString());
-        console.log(l);
         res.json(l);
       }
     });
