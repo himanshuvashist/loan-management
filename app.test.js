@@ -88,7 +88,7 @@ describe('Test /submit path', () => {
         request(app)
             .post('/submit')
             .then((res) => {
-                expect(res.StatusCode).toEqual(400)
+                expect(res.statusCode).toEqual(400)
                 done()
             })
     })
