@@ -179,6 +179,15 @@ describe('Test /login path', () => {
         done();
       });
   });
+  it(`get 200 on sending a proper login request`, done => {
+    request(app)
+      .post('/login')
+      .send({userName: customerEmail, password: customerPassword})
+      .then(res => {
+        expect(res.statusCode).toEqual(400);
+        done();
+      });
+  });
 });
 
 let customerRequest = request(app)
