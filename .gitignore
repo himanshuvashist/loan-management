@@ -46,6 +46,8 @@ globalConfig.json
 /node_modules
 /.pnp
 .pnp.js
+*/node_modules
+/frontend/package-lock.json
 
 # testing
 /coverage
