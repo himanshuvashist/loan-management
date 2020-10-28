@@ -2,5 +2,6 @@
 //Sync object
 module.exports = {
   verbose: true,
-  preset: '@shelf/jest-mongodb',
+  // preset: '@shelf/jest-mongodb',
+  testEnvironment:'node'
 };

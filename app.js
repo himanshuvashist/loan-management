@@ -352,10 +352,10 @@ app.post('/applicationupdate', authenticateRequest, updatePreCheck, (req, res) =
 });
 
 const editUserPreCheck = (req, res, next) => {
-  if (!req.body.hasOwnProperty('email') && req.body.email === '') {
+  if (!(req.body.hasOwnProperty('email') && req.body.email !== '')) {
     return res.sendStatus(403);
   }
-  if (!req.body.hasOwnProperty('userName') && req.body.userName === '') {
+  if (!(req.body.hasOwnProperty('userName') && req.body.userName !== '')) {
     return res.sendStatus(403);
   }
   const authHeader = req.headers.authorization;
