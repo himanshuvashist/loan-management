@@ -71,19 +71,19 @@ beforeAll(() => {
         user_instance.save(err => {
           assert.equal(null, err);
         });
+
+        const application_instance = new application();
+        applicationId = application_instance._id;
+        application_instance.application_id = application_instance._id;
+        application_instance.submitted_by = agentId;
+        application_instance.on_behalf = customerId;
+        application_instance.tenure = 10;
+        application_instance.amount = 10;
+        application_instance.save(err => {
+          assert.equal(null, err);
+        });
       });
     });
-  });
-
-  const application_instance = new application();
-  applicationId = application_instance._id;
-  application_instance.application_id = application_instance._id;
-  application_instance.submitted_by = agentId;
-  application_instance.on_behalf = customerId;
-  application_instance.tenure = 10;
-  application_instance.amount = 10;
-  application_instance.save(err => {
-    assert.equal(null, err);
   });
 });
 
