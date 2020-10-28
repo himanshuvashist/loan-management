@@ -59,19 +59,18 @@ beforeAll(() => {
       user_instance.save(err => {
         assert.equal(null, err);
       });
-    });
-
-    bcrypt.hash(customerPassword, process.env.SALT, function (err, hash) {
-      assert.equal(null, err);
-      const user_instance = new user();
-      customerId = user_instance._id;
-      user_instance.userName = customerUserName;
-      user_instance.password = hash;
-      user_instance.email = customerEmail;
-      user_instance.registeredUnder = adminId;
-      user_instance.userType = 'customer';
-      user_instance.save(err => {
+      bcrypt.hash(customerPassword, process.env.SALT, function (err, hash) {
         assert.equal(null, err);
+        const user_instance = new user();
+        customerId = user_instance._id;
+        user_instance.userName = customerUserName;
+        user_instance.password = hash;
+        user_instance.email = customerEmail;
+        user_instance.registeredUnder = adminId;
+        user_instance.userType = 'customer';
+        user_instance.save(err => {
+          assert.equal(null, err);
+        });
       });
     });
   });
