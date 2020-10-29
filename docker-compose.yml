@@ -9,19 +9,26 @@ services:
       SALT: "$$2b$$10$$M6XTJ8gP1hDp7j7eGQ5VZu"
       JWT_ACCESS_TOKEN_SECRET_KEY: secret
       JWT_REFRESH_TOKEN_SECRET_KEY: secret2
-      DB_HOST: localhost
+      DB_HOST: db
       DB_PORT: 27017
       DB_NAME: ""
       DB_USERNAME: root
       DB_PASSWORD: password
-      ALLOWED_ORIGIN: http://localhost:3001
+      ALLOWED_ORIGIN: http://web:3001
+    links:
+      - db
+    depends_on:
+      - db
 
   web:
     build: ./frontend
     ports:
       - "3001:80"
     environment:
-      API_URL: http://localhost:3000
+      API_URL: http://api:3000
+    links:
+      - api
+      
   db:
     image: mongo
     environment:
