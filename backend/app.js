@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const corsConfig = {
-  origin: 'http://localhost:3001',
+  origin: 'http://ec2-15-207-236-232.ap-south-1.compute.amazonaws.com',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
   optionsSuccessStatus: 204,
