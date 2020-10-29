@@ -25,7 +25,7 @@ app.use(cors(corsConfig));
 const result = dotenv.config();
 
 if (result.error) {
-  throw result.error;
+  console.log(result.error);
 }
 
 saltRounds = 10;
