@@ -34,7 +34,7 @@ export default class RegistrationPage extends Component {
     console.log(event);
     let config = {
       method: "post",
-      url: "http://localhost:3000/register",
+      url: `${process.env.API_URL}/register`,
       headers: {
         "Content-Type": "application/json",
       },

@@ -27,7 +27,7 @@ export default class loanRequest extends Component {
     e.preventDefault();
     let config = {
       method: "post",
-      url: "http://localhost:3000/submit",
+      url: `${process.env.API_URL}/submit`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
