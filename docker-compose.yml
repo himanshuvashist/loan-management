@@ -1,9 +1,9 @@
 version: "3.8"
 services:
-  frontapp:
-    build: ./frontend/Dockerfile
-    ports:
-      - "3000:3000"
+  api:
+    build: 
+      context: ./backend
+      network: host
     environment:
       - PORT = 3000
       - SALT = $2b$10$M6XTJ8gP1hDp7j7eGQ5VZu
@@ -15,7 +15,7 @@ services:
       - DB_USERNAME = root
       - DB_PASSWORD = password
 
-  api:
+  web:
     build: ./frontend/Dockerfile
     ports:
       - "3001:3001"
