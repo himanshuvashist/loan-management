@@ -1,28 +1,29 @@
 version: "3.8"
 services:
   api:
-    build: 
+    build:
       context: ./backend
       network: host
     environment:
-      - PORT = 3000
-      - SALT = $2b$10$M6XTJ8gP1hDp7j7eGQ5VZu
-      - JWT_ACCESS_TOKEN_SECRET_KEY = secret
-      - JWT_REFRESH_TOKEN_SECRET_KEY = secret2
-      - DB_HOST = localhost
-      - DB_PORT = 27017
-      - DB_NAME = 
-      - DB_USERNAME = root
-      - DB_PASSWORD = password
+      PORT: 3000
+      SALT: "$$2b$$10$$M6XTJ8gP1hDp7j7eGQ5VZu"
+      JWT_ACCESS_TOKEN_SECRET_KEY: secret
+      JWT_REFRESH_TOKEN_SECRET_KEY: secret2
+      DB_HOST: localhost
+      DB_PORT: 27017
+      DB_NAME: ""
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      ALLOWED_ORIGIN: http://localhost:3001
 
   web:
-    build: ./frontend/Dockerfile
+    build: ./frontend
     ports:
-      - "3001:3001"
+      - "3001:80"
     environment:
-      ALLOWED_ORIGIN : http://localhost:3000
+      API_URL: http://localhost:3000
   db:
-    image: mongodb
+    image: mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
