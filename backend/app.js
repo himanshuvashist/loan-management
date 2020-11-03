@@ -13,6 +13,7 @@ const jwt = require('jsonwebtoken');
 app.use(express.json());
 app.use(cookieParser());
 
+const result = dotenv.config();
 const corsConfig = {
   origin: process.env.ALLOWED_ORIGIN,
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -22,7 +23,6 @@ const corsConfig = {
 };
 app.use(cors(corsConfig));
 
-const result = dotenv.config();
 
 if (result.error) {
   console.log(result.error);
