@@ -19,7 +19,7 @@ export default class loanlist extends Component {
     console.log(e);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/applicationstatusupdate`,
+      url: `${process.env.REACT_APP_API_URL}/applicationstatusupdate`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
@@ -48,7 +48,7 @@ export default class loanlist extends Component {
     console.log("e", e);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/applicationstatusupdate`,
+      url: `${process.env.REACT_APP_API_URL}/applicationstatusupdate`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
@@ -84,7 +84,7 @@ export default class loanlist extends Component {
 
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/applicationupdate`,
+      url: `${process.env.REACT_APP_API_URL}/applicationupdate`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
@@ -106,7 +106,7 @@ export default class loanlist extends Component {
     const decoded = jwt.decode(this.props.token);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/applicationlist`,
+      url: `${process.env.REACT_APP_API_URL}/applicationlist`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,

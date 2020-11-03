@@ -31,10 +31,11 @@ export default class RegistrationPage extends Component {
 
   handleSubmit(event) {
     event.preventDefault();
+    console.log(`${process.env.REACT_APP_API_URL}/register`)
     console.log(event);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/register`,
+      url: `${process.env.REACT_APP_API_URL}/register`,
       headers: {
         "Content-Type": "application/json",
       },

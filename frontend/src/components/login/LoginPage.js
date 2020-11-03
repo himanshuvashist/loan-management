@@ -17,7 +17,7 @@ export default class LoginPage extends Component {
     console.log(event);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/login`,
+      url: `${process.env.REACT_APP_API_URL}/login`,
       headers: {
         "Content-Type": "application/json",
       },
