@@ -14,7 +14,7 @@ export default class Dashboard extends Component {
   handleClick() {
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/logout`,
+      url: `${process.env.REACT_APP_API_URL}/logout`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
