@@ -19,7 +19,7 @@ class userlist extends Component {
     console.log(e);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/promotion`,
+      url: `${process.env.REACT_APP_API_URL}/promotion`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
@@ -45,7 +45,7 @@ class userlist extends Component {
     const decoded = jwt.decode(this.props.token);
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/userlist`,
+      url: `${process.env.REACT_APP_API_URL}/userlist`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
@@ -109,7 +109,7 @@ class userlist extends Component {
     console.log(data)
     let config = {
       method: "post",
-      url: `${process.env.API_URL}/edituser`,
+      url: `${process.env.REACT_APP_API_URL}/edituser`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
