@@ -1,6 +1,10 @@
 # Stage one
 FROM node:lts as builder_base
 
+ARG api_port
+
+ENV REACT_APP_API_URL=$api_port
+
 COPY package.json /app/
 
 WORKDIR /app
