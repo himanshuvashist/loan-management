@@ -14,10 +14,10 @@ export default class LoginPage extends Component {
 
   handleSubmit(event) {
     event.preventDefault();
-    console.log(event);
+    console.log(`${window.location.protocol}//${window.location.hostname}:${process.env.REACT_APP_API_URL}/login`)
     let config = {
       method: "post",
-      url: `${process.env.REACT_APP_API_URL}/login`,
+      url: `${window.location.protocol}//${window.location.hostname}:${process.env.REACT_APP_API_URL}/login`,
       headers: {
         "Content-Type": "application/json",
       },

@@ -27,7 +27,7 @@ export default class loanRequest extends Component {
     e.preventDefault();
     let config = {
       method: "post",
-      url: `${process.env.REACT_APP_API_URL}/submit`,
+      url: `${window.location.protocol}//${window.location.hostname}:${process.env.REACT_APP_API_URL}/submit`,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${this.props.token}`,
