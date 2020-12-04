@@ -1,0 +1,1 @@
+docker exec api_container npm run test
