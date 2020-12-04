@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const result = dotenv.config();
+const result = dotenv.config({silent: true});
 const assert = require('assert');
 const user = require('./models/user');
 const bcrypt = require('bcrypt');
 
 if (result.error) {
-  throw result.error;
+  console.log("dotenv file maybe not present, but its okay its for development purpose");
 }
 
 let url = `mongodb://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;

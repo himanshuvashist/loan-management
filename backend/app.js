@@ -13,7 +13,7 @@ const jwt = require('jsonwebtoken');
 app.use(express.json());
 app.use(cookieParser());
 
-const result = dotenv.config();
+const result = dotenv.config({silent: true});
 const corsConfig = {
   origin: process.env.ALLOWED_ORIGIN,
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -25,7 +25,7 @@ app.use(cors(corsConfig));
 
 
 if (result.error) {
-  console.log(result.error);
+  console.log("dotenv file maybe not present, but its okay its for development purpose");
 }
 
 saltRounds = 10;
